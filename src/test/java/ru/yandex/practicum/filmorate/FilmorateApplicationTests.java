@@ -1,8 +1,12 @@
 package ru.yandex.practicum.filmorate;
 
+
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.controller.UserController;
@@ -12,11 +16,14 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @SpringBootTest
 class FilmorateApplicationTests {
     private FilmController filmController;
     private UserController userController;
+    @Autowired
+    private Validator validator;
 
     @BeforeEach
     void setUp() {
@@ -134,11 +141,18 @@ class FilmorateApplicationTests {
     void shouldThrowWhenUserEmailIsInvalid() {
         User noAtUser = createValidUser();
         noAtUser.setEmail("invalid-email.com");
-        Assertions.assertThrows(ValidationException.class, () -> userController.create(noAtUser));
+        Set<ConstraintViolation<User>> violationsNoAt = validator.validate(noAtUser);
+        Assertions.assertFalse(violationsNoAt.isEmpty());
+
+        User doubleAtUser = createValidUser();
+        doubleAtUser.setEmail("some@@mail.ru");
+        Set<ConstraintViolation<User>> violationsDoubleAt = validator.validate(doubleAtUser);
+        Assertions.assertFalse(violationsDoubleAt.isEmpty());
 
         User blankEmailUser = createValidUser();
         blankEmailUser.setEmail(" ");
-        Assertions.assertThrows(ValidationException.class, () -> userController.create(blankEmailUser));
+        Set<ConstraintViolation<User>> violationsBlank = validator.validate(blankEmailUser);
+        Assertions.assertFalse(violationsBlank.isEmpty());
     }
 
     @Test
@@ -155,12 +169,12 @@ class FilmorateApplicationTests {
     @Test
     void shouldValidateUserBirthdayBoundary() {
         User validUser = createValidUser();
-        validUser.setBirthday(LocalDate.now());
-        Assertions.assertEquals(LocalDate.now(), userController.create(validUser).getBirthday());
+        validUser.setBirthday(LocalDate.now()); // если поставили @Past, замените на LocalDate.now().minusDays(1)
+        Assertions.assertTrue(validator.validate(validUser).isEmpty());
 
         User invalidUser = createValidUser();
         invalidUser.setBirthday(LocalDate.now().plusDays(1));
-        Assertions.assertThrows(ValidationException.class, () -> userController.create(invalidUser));
+        Assertions.assertFalse(validator.validate(invalidUser).isEmpty());
     }
 
     @Test

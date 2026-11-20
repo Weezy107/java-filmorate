@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,7 +12,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +30,7 @@ public class UserController {
     }
 
     @PostMapping
-    public User create(@RequestBody User user) {
+    public User create(@RequestBody @Valid User user) {
         validate(user);
         user.setId(nextId++);
         users.put(user.getId(), user);
@@ -39,7 +39,7 @@ public class UserController {
     }
 
     @PutMapping
-    public User update(@RequestBody User user) {
+    public User update(@RequestBody @Valid User user) {
         if (user == null) {
             log.warn("Ошибка обновления пользователя: передан пустой запрос");
             throw new ValidationException("Пользователь не может быть null");
@@ -63,17 +63,9 @@ public class UserController {
             log.warn("Ошибка валидации пользователя: передан пустой запрос");
             throw new ValidationException("Пользователь не может быть null");
         }
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            log.warn("Ошибка валидации пользователя: некорректный email '{}'", user.getEmail());
-            throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
-        }
         if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
             log.warn("Ошибка валидации пользователя: некорректный логин '{}'", user.getLogin());
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
-        }
-        if (user.getBirthday() == null || user.getBirthday().isAfter(LocalDate.now())) {
-            log.warn("Ошибка валидации пользователя: некорректная дата рождения {}", user.getBirthday());
-            throw new ValidationException("Дата рождения не может быть в будущем");
         }
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
